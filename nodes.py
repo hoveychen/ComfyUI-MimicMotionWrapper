@@ -365,6 +365,7 @@ class MimicMotionGetPoses:
         return {"required": {
             "ref_image": ("IMAGE",),
             "pose_images": ("IMAGE",),
+            "relative_position": ("BOOLEAN", {"default": True}),
             "include_body": ("BOOLEAN", {"default": True}),
             "include_hand": ("BOOLEAN", {"default": True}),
             "include_face": ("BOOLEAN", {"default": True}),
@@ -376,7 +377,7 @@ class MimicMotionGetPoses:
     FUNCTION = "process"
     CATEGORY = "MimicMotionWrapper"
 
-    def process(self, ref_image, pose_images, include_body, include_hand, include_face):
+    def process(self, ref_image, pose_images, relative_position, include_body, include_hand, include_face):
         device = mm.get_torch_device()
         offload_device = mm.unet_offload_device()
         from .mimicmotion.dwpose.util import draw_pose
@@ -452,10 +453,14 @@ class MimicMotionGetPoses:
             [p['bodies']['candidate'] for p in detected_poses_np_list if p['bodies']['candidate'].shape[0] == 18])[:,
                         ref_keypoint_id]
         # compute linear-rescale params
-        ay, by = np.polyfit(detected_bodies[:, :, 1].flatten(), np.tile(ref_body[:, 1], len(detected_bodies)), 1)
-        fh, fw, _ = pose_images_np[0].shape
-        ax = ay / (fh / fw / height * width)
-        bx = np.mean(np.tile(ref_body[:, 0], len(detected_bodies)) - detected_bodies[:, :, 0].flatten() * ax)
+        if relative_position:
+            ay, by = np.polyfit(detected_bodies[:, :, 1].flatten(), np.tile(ref_body[:, 1], len(detected_bodies)), 1)
+            fh, fw, _ = pose_images_np[0].shape
+            ax = ay / (fh / fw / height * width)
+            bx = np.mean(np.tile(ref_body[:, 0], len(detected_bodies)) - detected_bodies[:, :, 0].flatten() * ax)
+        else:
+            ax, ay, bx, by = 1, 1, 0, 0
+
         a = np.array([ax, ay])
         b = np.array([bx, by])
         output_pose = []
