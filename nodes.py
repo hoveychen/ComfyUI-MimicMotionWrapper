@@ -459,7 +459,12 @@ class MimicMotionGetPoses:
             ax = ay / (fh / fw / height * width)
             bx = np.mean(np.tile(ref_body[:, 0], len(detected_bodies)) - detected_bodies[:, :, 0].flatten() * ax)
         else:
-            ax, ay, bx, by = 1, 1, 0, 0
+            original_center_x = np.mean(detected_bodies[:, :, 0])
+            original_center_y = np.mean(detected_bodies[:, :, 1])
+            ax = np.mean(detected_bodies[:, :, 0].flatten()) / np.mean(ref_body[:, 0])
+            ay = np.mean(detected_bodies[:, :, 1].flatten()) / np.mean(ref_body[:, 1])
+            bx = (1 - ax) * original_center_x
+            by = (1 - ay) * original_center_y
 
         a = np.array([ax, ay])
         b = np.array([bx, by])
